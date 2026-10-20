@@ -16,6 +16,11 @@ Package: linux-headers-*
 Pin: release a=stable-backports
 Pin-Priority: 600
 
+# Backports kernels pre-depend on a newer linux-base than stable has.
+Package: linux-base
+Pin: release a=stable-backports
+Pin-Priority: 600
+
 Package: firmware-*
 Pin: release a=stable-backports
 Pin-Priority: 600

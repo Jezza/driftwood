@@ -37,6 +37,8 @@ jobs:
         run: |
           tools/fetch-indices.sh
           python3 tools/check-packages.py plasma
+      - name: apt can install the package set (pins, backports, extra repos)
+        run: ci/resolve-check.sh plasma
       - name: Calamares configs match the 3.3 schemas
         run: python3 tools/check-calamares.py plasma
       - name: Unit tests
