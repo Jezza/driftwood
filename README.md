@@ -47,6 +47,10 @@ push to `main`:
    - BIOS through isolinux.
    Screenshots and logs are kept.
 
+**Releases:** pushing a tag `v<debian major>.<yymmdd>` (e.g. `v13.261020`)
+runs the same pipeline. If both images build and all six boot tests pass,
+it publishes a GitHub release with the ISOs, checksums and package lists.
+
 To build locally (Debian trixie, root):
 
 ```sh

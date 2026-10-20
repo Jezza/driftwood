@@ -3,6 +3,9 @@ name: Build Driftwood ISO
 on:
   push:
     branches: [main]
+    # v<debian major>.<yymmdd>[.n], e.g. v13.261020: builds, boot-tests and
+    # publishes a GitHub release (path filters don't apply to tag pushes)
+    tags: ["v*"]
     paths:
       - "plasma/**"
       - "ci/**"
@@ -67,7 +70,11 @@ jobs:
       - name: Version
         id: meta
         run: |
-          v="13.$(date -u +%y%m%d)-${GITHUB_SHA::7}"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            v="${GITHUB_REF_NAME#v}"
+          else
+            v="13.$(date -u +%y%m%d)-${GITHUB_SHA::7}"
+          fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "name=Driftwood_Plasma_${v}_${{ matrix.variant }}_x86-64" >> "$GITHUB_OUTPUT"
       - name: live-build (Debian trixie container)
@@ -166,3 +173,36 @@ jobs:
           name: boot-${{ matrix.variant }}-${{ matrix.mode }}
           path: boot-${{ matrix.variant }}-${{ matrix.mode }}
           retention-days: 14
+
+  release:
+    name: Publish release
+    # only for tags, and only if both images built and every boot test passed
+    if: ${{ github.ref_type == 'tag' && success() }}
+    needs: [build, boot]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: iso-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: build-info-*
+          path: info
+          merge-multiple: true
+      - name: Verify checksums
+        run: cd dist && sha256sum -c *.sha256
+      - name: Release notes
+        run: ci/release-notes.sh "${GITHUB_REF_NAME}" dist info > notes.md && cat notes.md
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          find info -name '*.packages' -exec cp {} dist/ \;
+          gh release create "$GITHUB_REF_NAME" --verify-tag --prerelease \
+            --title "Driftwood ${GITHUB_REF_NAME#v}" --notes-file notes.md \
+            dist/*.iso dist/*.iso.sha256 dist/*.packages
