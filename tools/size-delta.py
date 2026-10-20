@@ -26,7 +26,7 @@ IDX = os.path.join(HERE, ".cache", "idx")
 # Preference order: a name is taken from the first suite that has it
 # (mozilla is pinned to 1000 for firefox; backports only when nothing else has it).
 ORDER = [r"mozilla-", r"trixie-security-", r"trixie-updates-",
-         r"trixie-(main|contrib|non-free|non-free-firmware)$", r"trixie-backports-", r"ft-"]
+         r"trixie-(main|contrib|non-free|non-free-firmware)$", r"trixie-backports-"]
 
 
 def rank(suite):

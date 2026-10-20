@@ -3,8 +3,7 @@
 # Driftwood
 
 A live/installable **Debian stable + KDE Plasma** image. Everything comes from
-Debian's own archive, apart from Firefox (Mozilla's apt repository) and the
-VirtualBox guest additions (Debian Fast Track). Installed systems track
+Debian's own archive, apart from Firefox (Mozilla's apt repository). Installed systems track
 `stable`, so they move to each new Debian release with a normal upgrade.
 
 ## What's in it

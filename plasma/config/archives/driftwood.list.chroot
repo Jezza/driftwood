@@ -1,4 +1,0 @@
-# VirtualBox guest additions (Debian Fast Track). Fast Track only publishes
-# codename suites, so bump 'trixie' here when Debian stable moves on.
-deb https://fasttrack.debian.net/debian-fasttrack/ trixie-fasttrack main contrib non-free  #Trixie Fast Track (for VirtualBox)
-deb https://fasttrack.debian.net/debian-fasttrack/ trixie-backports-staging main contrib non-free  #Trixie Fast Track Staging

@@ -1,9 +1,0 @@
-# Debian Fast Track: VirtualBox guest additions for Debian stable.
-# https://fasttrack.debian.net
-# Key from the fasttrack-archive-keyring package. Fast Track only publishes
-# codename suites, so bump 'trixie' here when Debian stable moves on.
-Types: deb
-URIs: https://fasttrack.debian.net/debian-fasttrack/
-Suites: trixie-fasttrack trixie-backports-staging
-Components: main contrib non-free
-Signed-By: /usr/share/keyrings/fasttrack-archive-keyring.gpg

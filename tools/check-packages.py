@@ -6,7 +6,7 @@ Usage: tools/check-packages.py <variant-dir>...
 Fails (exit 1) on any entry that no real package satisfies. Also reports
 entries that only resolve through a virtual name, transitional/dummy
 packages, and packages that only exist outside trixie proper (backports,
-fasttrack) since those need the matching repo enabled at build time.
+third-party repos) since those need the matching repo enabled at build time.
 Requires tools/fetch-indices.sh to have run.
 """
 import glob

@@ -9,7 +9,6 @@ cd "$cache/idx"
 
 DEB=https://deb.debian.org/debian
 SEC=https://security.debian.org/debian-security
-FT=https://fasttrack.debian.net/debian-fasttrack
 
 fetch_pkgs() { # url out
   if curl -sfL "$1" > "$2.tmp" 2>/dev/null && grep -q '^Package: ' "$2.tmp"; then mv "$2.tmp" "$2"; return; fi
@@ -24,11 +23,6 @@ for s in trixie trixie-updates trixie-backports; do
   done
 done
 fetch_pkgs "$SEC/dists/trixie-security/main/binary-amd64/Packages" trixie-security-main.txt
-for s in trixie-fasttrack trixie-backports-staging; do
-  for a in main contrib non-free; do
-    fetch_pkgs "$FT/dists/$s/$a/binary-amd64/Packages" "ft-$s-$a.txt"
-  done
-done
 # Third-party repos the image enables (config/archives/*.list.chroot).
 fetch_pkgs "https://packages.mozilla.org/apt/dists/mozilla/main/binary-amd64/Packages" mozilla-main.txt
 mkdir -p i386
