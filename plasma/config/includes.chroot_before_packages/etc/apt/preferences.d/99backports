@@ -1,0 +1,28 @@
+# APT pinning preferences - https://wiki.debian.org/AptPreferences
+#
+# Copied in before the package lists are installed (live-build's
+# includes.chroot_before_packages), so the image is built with the same
+# kernel the installed system will track. From includes.chroot it only
+# took effect at live-build's final upgrade, which then pulled a newer
+# backports kernel's headers in at the last moment and DKMS failed there.
+
+##### Kernel / firmware
+
+Package: linux-image-*
+Pin: release a=stable-backports
+Pin-Priority: 600
+
+Package: linux-headers-*
+Pin: release a=stable-backports
+Pin-Priority: 600
+
+Package: firmware-*
+Pin: release a=stable-backports
+Pin-Priority: 600
+
+##### NVIDIA proprietary drivers
+
+Package: nvidia-driver
+Pin: release a=stable-backports
+Pin-Priority: 600
+

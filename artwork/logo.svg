@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Driftwood logo. Released under CC0 1.0 (public domain dedication). -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4fa3a5"/>
+      <stop offset="1" stop-color="#2d7479"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d5a60"/>
+      <stop offset="1" stop-color="#0f3337"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2ede4"/>
+      <stop offset="0.55" stop-color="#d4cbbb"/>
+      <stop offset="1" stop-color="#a99d8a"/>
+    </linearGradient>
+    <clipPath id="disc"><circle cx="128" cy="128" r="122"/></clipPath>
+    <clipPath id="above"><rect x="0" y="0" width="256" height="158"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#disc)">
+    <rect width="256" height="256" fill="url(#sky)"/>
+    <rect y="156" width="256" height="100" fill="url(#sea)"/>
+
+    <!-- reflection of the log, broken by ripples -->
+    <g opacity="0.28" fill="#e9e2d6">
+      <path d="M44 162 L 214 160 L 206 166 L 52 168 Z"/>
+      <path d="M62 174 L 196 172 L 188 176 L 70 178 Z"/>
+      <path d="M84 186 L 172 184 L 166 187 L 90 189 Z"/>
+    </g>
+
+    <!-- the log: twisted, uneven, worn ends, one root flare, one snapped branch -->
+    <g clip-path="url(#above)">
+      <path d="M30 152
+               C 30 142, 38 136, 50 136
+               C 64 132, 80 134, 96 130
+               C 118 124, 140 128, 160 124
+               C 178 120, 190 114, 204 108
+               C 214 98, 230 98, 236 108
+               C 242 118, 238 130, 228 136
+               C 222 148, 210 156, 194 156
+               L 40 160
+               C 34 160, 30 157, 30 152 Z"
+            fill="url(#wood)" stroke="#7b6e5c" stroke-width="3.2" stroke-linejoin="round"/>
+      <!-- snapped branch -->
+      <path d="M118 128 C 116 112, 108 100, 96 92 L 104 88 L 100 84 C 116 90, 128 104, 132 126 Z"
+            fill="url(#wood)" stroke="#7b6e5c" stroke-width="3.2" stroke-linejoin="round"/>
+      <!-- grain, following the twist -->
+      <g fill="none" stroke="#8f826e" stroke-width="2.2" stroke-linecap="round">
+        <path d="M46 146 C 80 142, 110 138, 140 136 S 190 128, 214 116"/>
+        <path d="M58 154 C 96 152, 130 148, 168 146"/>
+        <path d="M154 138 C 176 136, 196 130, 210 124 S 228 112, 230 106"/>
+      </g>
+      <!-- knot: a small whorl, a nod to SpiralLinux -->
+      <g fill="none" stroke="#6d6150" stroke-width="2.4" stroke-linecap="round">
+        <path d="M84 143 c 0 -5 9 -6 11 -1 c 2 5 -5 8 -9 5 c -3 -2 -1 -6 3 -5"/>
+      </g>
+      <!-- root-end growth rings -->
+      <g fill="none" stroke="#8f826e" stroke-width="2">
+        <ellipse cx="226" cy="116" rx="6" ry="10" transform="rotate(-20 226 116)"/>
+        <ellipse cx="226" cy="116" rx="2.4" ry="4" transform="rotate(-20 226 116)"/>
+      </g>
+    </g>
+
+    <!-- waterline -->
+    <path d="M14 158 C 50 154, 70 162, 104 157 S 170 152, 244 156"
+          fill="none" stroke="#e6f3f0" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+    <path d="M40 200 C 80 196, 110 204, 150 199 S 210 194, 236 198"
+          fill="none" stroke="#e6f3f0" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+  </g>
+</svg>

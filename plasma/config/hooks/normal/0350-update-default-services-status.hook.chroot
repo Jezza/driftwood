@@ -1,0 +1,17 @@
+#!/bin/bash
+echo "I: running $0"
+
+disabled_services="rsync.service"
+enabled_services="earlyoom.service avahi-daemon.service cups-browsed.service bluetooth.service cups.service tlp.service systemd-timesyncd.service plymouth.service zramswap.service haveged.service sddm.service"
+
+for service in $disabled_services; do
+	echo "Disabling $service"
+	systemctl disable "$service" || true
+	systemctl stop "$service" || true
+done
+
+for service in $enabled_services; do
+	echo "Enabling $service"
+	systemctl enable "$service" || true
+	systemctl start "$service" || true
+done

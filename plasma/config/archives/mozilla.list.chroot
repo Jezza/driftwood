@@ -1,0 +1,2 @@
+# Mozilla's official Firefox repository (build time).
+deb https://packages.mozilla.org/apt mozilla main

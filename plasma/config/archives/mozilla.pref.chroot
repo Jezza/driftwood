@@ -1,0 +1,9 @@
+# Firefox comes from Mozilla, never from Debian.
+Package: firefox firefox-l10n-*
+Pin: origin packages.mozilla.org
+Pin-Priority: 1000
+
+# Everything else in the Mozilla repo (betas, nightly, VPN) is opt-in only.
+Package: *
+Pin: origin packages.mozilla.org
+Pin-Priority: 100

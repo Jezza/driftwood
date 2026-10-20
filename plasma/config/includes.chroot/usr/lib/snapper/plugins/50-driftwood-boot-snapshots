@@ -1,0 +1,115 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Driftwood snapper plugin: keep root snapshots bootable when /boot is a
+# separate partition.
+#
+# A btrfs snapshot of / does not contain /boot when /boot is its own
+# partition, so once apt removes a kernel, every snapshot that still has
+# only that kernel's modules becomes unbootable. On each root snapshot this
+# copies the kernels (and their initramfs) whose modules exist in the
+# snapshot to /boot/snapshots/<N>/, and removes them when the snapshot goes.
+#
+# Copies are deduplicated: files live once in /boot/snapshots/.store under
+# their SHA-256 and are hard-linked into each snapshot directory, so ten
+# snapshots of an unchanged system cost no extra space. If /boot would drop
+# below the reserve, the copy is skipped (logged); the GRUB snapshot menu
+# then only offers that snapshot the installed kernels it has modules for.
+#
+# snapper calls: <script> <action> <subvolume> <fstype> [<number>]
+# Plugins must not call snapper. Tunables (environment, for tests):
+#   DRIFTWOOD_BOOT (default /boot), DRIFTWOOD_BOOT_RESERVE_KB (default 262144)
+
+action=$1 subvolume=$2 fstype=$3 num=$4
+[ "$subvolume" = "/" ] && [ "$fstype" = btrfs ] || exit 0
+case "$num" in ''|*[!0-9]*) exit 0 ;; esac
+
+BOOT=${DRIFTWOOD_BOOT:-/boot}
+RESERVE_KB=${DRIFTWOOD_BOOT_RESERVE_KB:-262144}
+SNAPROOT=${DRIFTWOOD_SNAPROOT:-/.snapshots}
+STORE="$BOOT/snapshots/.store"
+DEST="$BOOT/snapshots/$num"
+
+log() { logger -t driftwood-boot-snapshots -- "$*" 2>/dev/null || echo "driftwood-boot-snapshots: $*" >&2; }
+
+# Only when /boot is a separate filesystem; otherwise snapshots carry /boot.
+separate_boot() {
+    [ -n "${DRIFTWOOD_BOOT:-}" ] && return 0
+    [ "$(stat -c %d "$BOOT")" != "$(stat -c %d /)" ]
+}
+
+prune_store() {
+    [ -d "$STORE" ] || return 0
+    find "$STORE" -type f -links 1 -delete
+}
+
+# link_into <src> <dest-dir>: store <src> by hash, hard-link it as <dest-dir>/<name>
+link_into() {
+    src=$1 dir=$2
+    sum=$(sha256sum "$src" | cut -d' ' -f1) || return 1
+    if [ ! -f "$STORE/$sum" ]; then
+        cp "$src" "$STORE/.tmp.$$" && mv "$STORE/.tmp.$$" "$STORE/$sum" || { rm -f "$STORE/.tmp.$$"; return 1; }
+    fi
+    ln -f "$STORE/$sum" "$dir/$(basename "$src")"
+}
+
+free_kb() { df -Pk "$BOOT" | awk 'NR==2 {print $4}'; }
+
+create() {
+    snap="$SNAPROOT/$num/snapshot"
+    [ -d "$snap" ] || { log "snapshot $num: $snap missing, skipped"; return 0; }
+    mkdir -p "$STORE" || return 1
+    tmp="$BOOT/snapshots/.new.$num"
+    rm -rf "$tmp"; mkdir "$tmp"
+
+    # Bytes not yet in the store, to check against free space first.
+    need=0 files=""
+    for k in "$BOOT"/vmlinuz-*; do
+        [ -f "$k" ] || continue
+        ver=${k##*/vmlinuz-}
+        [ -d "$snap/usr/lib/modules/$ver" ] || continue
+        for f in "$k" "$BOOT/initrd.img-$ver" "$BOOT/config-$ver" "$BOOT/System.map-$ver"; do
+            [ -f "$f" ] || continue
+            files="$files $f"
+        done
+    done
+    if [ -z "$files" ]; then
+        rmdir "$tmp"; log "snapshot $num: no installed kernel has modules in the snapshot"; return 0
+    fi
+    for f in $files; do
+        sum=$(sha256sum "$f" | cut -d' ' -f1)
+        [ -f "$STORE/$sum" ] || need=$((need + $(du -k "$f" | cut -f1)))
+    done
+    if [ $(( $(free_kb) - need )) -lt "$RESERVE_KB" ]; then
+        rmdir "$tmp"
+        log "snapshot $num: not copying kernels, /boot would go below ${RESERVE_KB}K free (need ${need}K)"
+        return 0
+    fi
+    for f in $files; do
+        link_into "$f" "$tmp" || { rm -rf "$tmp"; prune_store; log "snapshot $num: copy failed"; return 1; }
+    done
+    rm -rf "$DEST" && mv "$tmp" "$DEST"
+}
+
+delete() {
+    rm -rf "$DEST" "$BOOT/snapshots/.new.$num"
+    prune_store
+}
+
+# Drop copies whose snapshot is gone (e.g. deleted while this plugin was
+# absent, or with btrfs tools directly).
+reconcile() {
+    for d in "$BOOT"/snapshots/*/; do
+        n=${d%/}; n=${n##*/}
+        case "$n" in ''|*[!0-9]*) continue ;; esac
+        [ -d "$SNAPROOT/$n" ] || rm -rf "$BOOT/snapshots/$n"
+    done
+    prune_store
+}
+
+separate_boot || exit 0
+case "$action" in
+    create-snapshot-post) create; reconcile ;;
+    delete-snapshot-post) delete ;;
+esac
+exit 0

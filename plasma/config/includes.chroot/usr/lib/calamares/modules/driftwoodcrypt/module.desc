@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: no
+# SPDX-License-Identifier: GPL-3.0-or-later
+---
+type:       "job"
+name:       "driftwoodcrypt"
+interface:  "python"
+script:     "main.py"
+noconfig:   true

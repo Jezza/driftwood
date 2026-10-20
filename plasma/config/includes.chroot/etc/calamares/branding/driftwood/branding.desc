@@ -1,0 +1,35 @@
+---
+componentName:   driftwood
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 800px,520px
+windowPlacement: center
+
+strings:
+    productName:         Driftwood
+    shortProductName:    Driftwood
+    version:             13
+    shortVersion:        13
+    versionedName:       Driftwood 13
+    shortVersionedName:  Driftwood 13
+    bootloaderEntryName: Driftwood
+    productUrl:          https://github.com/Jezza/driftwood
+    supportUrl:          https://github.com/Jezza/driftwood/issues
+    knownIssuesUrl:      https://github.com/Jezza/driftwood/issues
+    releaseNotesUrl:     https://github.com/Jezza/driftwood/releases
+
+images:
+    productLogo:         "driftwood-logo.png"
+    productIcon:         "driftwood-logo.png"
+    productWelcome:      "welcome.png"
+    # productWallpaper:  "wallpaper.png"
+
+slideshow:               "show.qml"
+
+style:
+   sidebarBackground:    "#173f44"
+   sidebarText:          "#FFFFFF"
+   sidebarTextSelect:    "#292F34"
+
+slideshowAPI: 2

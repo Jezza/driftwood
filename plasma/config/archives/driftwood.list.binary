@@ -1,0 +1,9 @@
+# Debian Fast Track is in /etc/apt/sources.list.d/fasttrack.sources (shipped
+# via includes.chroot): live-build also applies *.list.binary to the bare
+# installer chroot, which has no fasttrack-archive-keyring.
+
+# Debian Testing
+#deb https://deb.debian.org/debian/ testing main contrib non-free non-free-firmware  #Debian Testing
+
+# Debian Sid ("Unstable")
+#deb https://deb.debian.org/debian/ sid main contrib non-free non-free-firmware  #Debian Sid ("Unstable")

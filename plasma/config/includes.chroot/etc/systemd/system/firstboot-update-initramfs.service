@@ -1,0 +1,13 @@
+[Unit]
+Description=Update the initrd images on first boot if using encrypted swap partition to make resume from hibernation work
+ConditionFirstBoot=yes
+DefaultDependencies=no
+# This service needs to write to the file system:
+After=systemd-remount-fs.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "if grep -qE 'luks.*resume|resume.*luks' /etc/default/grub; then update-initramfs -u -k all; fi"
+
+[Install]
+WantedBy=multi-user.target

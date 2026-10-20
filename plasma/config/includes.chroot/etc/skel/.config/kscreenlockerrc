@@ -1,0 +1,8 @@
+[$Version]
+update_info=kscreenlocker.upd:0.1-autolock
+
+[Daemon]
+Timeout=60
+
+[Greeter][Wallpaper][org.kde.image][General]
+Image=/usr/share/wallpapers/driftwood-captain-cove-2560x1600.jpg
