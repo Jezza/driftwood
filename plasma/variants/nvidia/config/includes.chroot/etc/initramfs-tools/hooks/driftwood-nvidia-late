@@ -6,11 +6,17 @@
 # firmware, which would otherwise sit in the live initrd as a second copy
 # of what is already in the root filesystem.
 #
-# Removing it here means nouveau/nova load from the root filesystem once it
-# is mounted, a few seconds later; until then the boot splash runs on the
-# firmware framebuffer (simpledrm). The drivers to remove are found by what
-# firmware they declare, not by name, so new NVIDIA drivers are covered too.
-# Runs after the packaged hooks; mkinitramfs runs depmod afterwards.
+# Removing it here means nouveau (or nova) loads from the root filesystem
+# once it is mounted, a few seconds later; until then the boot splash runs
+# on the firmware framebuffer (simpledrm). The drivers to remove are found
+# by the firmware they declare, not by name, so later NVIDIA drivers are
+# covered too.
+#
+# Ordering: hooks in /etc/initramfs-tools/hooks run after the packaged
+# ones, but mkinitramfs only *queues* modules while hooks run
+# (manual_add_modules) and copies them, with their firmware, after all
+# hooks. So flush the queue first, then remove what we don't want;
+# mkinitramfs runs depmod afterwards.
 PREREQ=""
 prereqs() { echo "$PREREQ"; }
 case "$1" in
@@ -19,8 +25,10 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
-moddir="${DESTDIR}/usr/lib/modules/${version}/kernel/drivers/gpu"
+apply_add_modules
+
 removed=0
+moddir="${DESTDIR}/usr/lib/modules/${version}/kernel/drivers/gpu"
 if [ -d "$moddir" ]; then
 	for m in $(find "$moddir" -name '*.ko*'); do
 		if modinfo -F firmware "$m" 2>/dev/null | grep -q '^nvidia/'; then
@@ -30,7 +38,9 @@ if [ -d "$moddir" ]; then
 	done
 fi
 for fw in "${DESTDIR}/usr/lib/firmware/nvidia" "${DESTDIR}/lib/firmware/nvidia"; do
-	[ -d "$fw" ] && [ ! -L "$fw" ] && rm -rf "$fw"
+	if [ -d "$fw" ] && [ ! -L "$fw" ]; then
+		rm -rf "$fw"
+	fi
 done
-[ "${verbose:-n}" = y ] && echo "driftwood-nvidia-late: removed $removed NVIDIA modules and their firmware"
+echo "driftwood-nvidia-late: removed $removed NVIDIA GPU module(s) and nvidia/ firmware from the initramfs"
 exit 0

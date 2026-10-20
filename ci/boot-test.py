@@ -95,9 +95,12 @@ DHCP_NAMES = {1: "DISCOVER", 3: "REQUEST", 8: "INFORM"}
 # ----------------------------------------------------------------------- QMP
 
 class QMP:
-    def __init__(self, path, timeout=30):
+    def __init__(self, path, timeout=30, proc=None):
         deadline = time.time() + timeout
         while True:
+            if proc is not None and proc.poll() is not None:
+                out = proc.stdout.read().decode(errors="replace") if proc.stdout else ""
+                sys.exit(f"qemu exited with {proc.returncode} before QMP came up:\n{out}")
             try:
                 self.sock = socket.socket(socket.AF_UNIX)
                 self.sock.connect(path)
@@ -232,7 +235,9 @@ def main():
            "-netdev", "user,id=n0", "-device", "virtio-net-pci,netdev=n0",
            "-object", f"filter-dump,id=f0,netdev=n0,file={pcap}",
            "-drive", f"file={os.path.abspath(args.iso)},media=cdrom,readonly=on,if=none,id=cd0",
-           "-device", "ide-cd,drive=cd0,bootindex=0",
+           # with -kernel, QEMU's direct-boot loader takes bootindex 0; the CD
+           # is then only the live medium, found by live-boot, not booted from
+           "-device", "ide-cd,drive=cd0" + ("" if args.mode == "kernel" else ",bootindex=0"),
            "-device", "qemu-xhci", "-device", "usb-tablet", "-no-reboot"]
     cmd += ["-enable-kvm", "-cpu", "host"] if kvm else ["-cpu", "max"]
     if args.mode == "uefi":
@@ -253,7 +258,7 @@ def main():
     start = time.time()
     result = {"mode": args.mode, "kvm": kvm, "passed": False, "reason": "timeout", "elapsed": None}
     try:
-        qmp = QMP(qmp_sock)
+        qmp = QMP(qmp_sock, proc=qemu)
         screens = Screens(qmp, out)
         passed_at = None
         while True:
