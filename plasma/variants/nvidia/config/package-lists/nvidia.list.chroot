@@ -1,0 +1,4 @@
+# NVIDIA image: nouveau (open driver) and its GPU firmware, on top of the
+# base AMD/Intel set, so hybrid laptops (Intel/AMD + NVIDIA) work too.
+firmware-nvidia-graphics
+xserver-xorg-video-nouveau

@@ -6,6 +6,17 @@ A live/installable **Debian stable + KDE Plasma** image. Everything comes from
 Debian's own archive, apart from Firefox (Mozilla's apt repository). Installed systems track
 `stable`, so they move to each new Debian release with a normal upgrade.
 
+## Images
+
+Two ISOs are built from the same config; pick by graphics card:
+
+- **amd**: AMD and Intel graphics (and VMs). No NVIDIA firmware or nouveau.
+- **nvidia**: everything in *amd* plus nouveau and NVIDIA GPU firmware, so it
+  also covers hybrid laptops (Intel/AMD + NVIDIA). NVIDIA firmware is kept out
+  of the initramfs (~150 MiB); nouveau loads from the root filesystem instead.
+
+`plasma/variants/<name>/` is overlaid on `plasma/` for each image.
+
 ## What's in it
 
 - **Debian 13 "trixie"**, KDE Plasma 6, with kernel and firmware from Debian backports.
@@ -39,8 +50,8 @@ push to `main`:
 To build locally (Debian trixie, root):
 
 ```sh
-docker run --rm --privileged -v "$PWD:/src" -w /src debian:trixie ci/build-iso.sh
-# -> out/Driftwood_Plasma_<version>_x86-64.iso
+docker run --rm --privileged -e VARIANT=amd -v "$PWD:/src" -w /src debian:trixie ci/build-iso.sh
+# -> out/Driftwood_Plasma_<version>_amd_x86-64.iso   (VARIANT=nvidia for the other)
 ```
 
 ## Layout

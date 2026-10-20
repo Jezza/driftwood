@@ -36,21 +36,25 @@ jobs:
       - name: Package lists resolve against trixie
         run: |
           tools/fetch-indices.sh
-          python3 tools/check-packages.py plasma
-      - name: apt can install the package set (pins, backports, extra repos)
-        run: ci/resolve-check.sh plasma
+          python3 tools/check-packages.py plasma plasma/variants/nvidia
+      - name: apt can install each image's package set (pins, backports, extra repos)
+        run: |
+          ci/resolve-check.sh plasma amd
+          ci/resolve-check.sh plasma nvidia
       - name: Calamares configs match the 3.3 schemas
         run: python3 tools/check-calamares.py plasma
       - name: Unit tests
         run: tests/run-all.sh
 
   build:
-    name: Build ISO
+    name: Build ISO (${{ matrix.variant }})
     needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 150
-    outputs:
-      name: ${{ steps.meta.outputs.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [amd, nvidia]
     steps:
       - name: Free disk space
         run: |
@@ -65,12 +69,12 @@ jobs:
         run: |
           v="13.$(date -u +%y%m%d)-${GITHUB_SHA::7}"
           echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "name=Driftwood_Plasma_${v}_x86-64" >> "$GITHUB_OUTPUT"
+          echo "name=Driftwood_Plasma_${v}_${{ matrix.variant }}_x86-64" >> "$GITHUB_OUTPUT"
       - name: live-build (Debian trixie container)
         run: |
           sudo mkdir -p /mnt/build
           docker run --rm --privileged \
-            -e VERSION=${{ steps.meta.outputs.version }} -e WORK=/build \
+            -e VERSION=${{ steps.meta.outputs.version }} -e VARIANT=${{ matrix.variant }} -e WORK=/build \
             -v "$PWD:/src" -v /mnt/build:/build -w /src \
             debian:trixie ci/build-iso.sh
           sudo chown -R "$(id -u):$(id -g)" out
@@ -79,7 +83,7 @@ jobs:
         # before the size check, so an oversized ISO can still be inspected
         uses: actions/upload-artifact@v7
         with:
-          name: iso
+          name: iso-${{ matrix.variant }}
           path: |
             out/*.iso
             out/*.iso.sha256
@@ -91,7 +95,7 @@ jobs:
           size=$(stat -c %s "$iso")
           pkgs=$(wc -l < out/${{ steps.meta.outputs.name }}.packages)
           {
-            echo "### ISO"
+            echo "### ISO (${{ matrix.variant }})"
             echo ""
             echo "- size: $size bytes ($(numfmt --to=iec-i --suffix=B "$size")), limit $(numfmt --to=iec-i --suffix=B "$ISO_LIMIT_BYTES")"
             echo "- headroom: $(numfmt --to=iec-i --suffix=B $(( ISO_LIMIT_BYTES - size )))"
@@ -110,7 +114,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: build-info
+          name: build-info-${{ matrix.variant }}
           path: |
             out/*.packages
             out/*.contents
@@ -120,13 +124,16 @@ jobs:
           retention-days: 14
 
   boot:
-    name: Boot test (${{ matrix.mode }})
+    name: Boot test (${{ matrix.variant }}, ${{ matrix.mode }})
     needs: build
+    # run for whichever image built, even if the other variant failed
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
+        variant: [amd, nvidia]
         mode: [kernel, uefi, bios]
     steps:
       - uses: actions/checkout@v7
@@ -143,19 +150,19 @@ jobs:
           qemu-system-x86_64 --version | head -1
       - uses: actions/download-artifact@v8
         with:
-          name: iso
+          name: iso-${{ matrix.variant }}
           path: iso
       - name: Verify checksum
         run: cd iso && sha256sum -c *.sha256
       - name: Boot
-        run: python3 ci/boot-test.py iso/*.iso --mode ${{ matrix.mode }} --out boot-${{ matrix.mode }}
+        run: python3 ci/boot-test.py iso/*.iso --mode ${{ matrix.mode }} --out boot-${{ matrix.variant }}-${{ matrix.mode }}
       - name: Summary
         if: always()
-        run: cat boot-${{ matrix.mode }}/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+        run: cat boot-${{ matrix.variant }}-${{ matrix.mode }}/summary.md >> "$GITHUB_STEP_SUMMARY" || true
       - name: Upload boot artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: boot-${{ matrix.mode }}
-          path: boot-${{ matrix.mode }}
+          name: boot-${{ matrix.variant }}-${{ matrix.mode }}
+          path: boot-${{ matrix.variant }}-${{ matrix.mode }}
           retention-days: 14

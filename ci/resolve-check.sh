@@ -8,10 +8,11 @@
 # (trixie, -updates, -security, -backports, plus config/archives/*.list.chroot)
 # and the image's apt preferences, then simulates installing the kernel and
 # every package list.
-#   ci/resolve-check.sh [variant-dir]       (default: plasma)
+#   ci/resolve-check.sh [base-dir] [variant]   (default: plasma, all variants)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 V=${1:-plasma}
+VARIANT=${2:-}
 C=$V/config
 WORK=$(mktemp -d -p "${TMPDIR:-/tmp}" resolve.XXXX)
 trap '[ -n "${KEEP_SIM:-}" ] && cp "$WORK/sim.out" "$KEEP_SIM"; rm -rf "$WORK"' EXIT
@@ -51,10 +52,13 @@ APT=(-o Dir="$WORK" -o Dir::State::status="$WORK/var/lib/dpkg/status"
      -o Dir::Etc::TrustedParts="$WORK/etc/apt/trusted.gpg.d")
 apt-get "${APT[@]}" -qq update
 
-pkgs=$(cat "$C"/package-lists/*.list.chroot | sed 's/#.*//' | tr -s ' \t' '\n' | grep -v '^$' | sort -u)
+shopt -s nullglob
+lists=("$C"/package-lists/*.list.chroot)
+[ -n "$VARIANT" ] && lists+=("$V/variants/$VARIANT"/config/package-lists/*.list.chroot)
+pkgs=$(cat "${lists[@]}" 2>/dev/null | sed 's/#.*//' | tr -s ' \t' '\n' | grep -v '^$' | sort -u)
 kernel=$(sed -n 's/.*--linux-packages "\([^"]*\)".*/\1/p' "$V/auto/iso")
 for k in $kernel; do pkgs="$pkgs $k-amd64"; done
-echo "resolving $(echo $pkgs | wc -w) packages (kernel: $kernel)"
+echo "resolving $(echo $pkgs | wc -w) packages (variant: ${VARIANT:-base}, kernel: $kernel)"
 if out=$(apt-get "${APT[@]}" -s install $pkgs 2>&1); then echo "$out" > "$WORK/sim.out"
     n=$(grep -c '^Inst ' <<<"$out")
     echo "OK: $n packages would be installed"

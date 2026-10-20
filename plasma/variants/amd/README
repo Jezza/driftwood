@@ -1,0 +1,2 @@
+AMD/Intel image: the base config as-is (no NVIDIA firmware, no nouveau X driver).
+Files under this directory are copied over plasma/ before the build.

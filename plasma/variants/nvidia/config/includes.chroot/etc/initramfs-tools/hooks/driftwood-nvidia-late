@@ -1,0 +1,36 @@
+#!/bin/sh
+# Driftwood (NVIDIA image): keep NVIDIA GPU firmware out of the initramfs.
+#
+# The plymouth hook copies every DRM driver into the initramfs, and each
+# driver brings its firmware with it. For NVIDIA that is ~150 MiB of GSP
+# firmware, which would otherwise sit in the live initrd as a second copy
+# of what is already in the root filesystem.
+#
+# Removing it here means nouveau/nova load from the root filesystem once it
+# is mounted, a few seconds later; until then the boot splash runs on the
+# firmware framebuffer (simpledrm). The drivers to remove are found by what
+# firmware they declare, not by name, so new NVIDIA drivers are covered too.
+# Runs after the packaged hooks; mkinitramfs runs depmod afterwards.
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+prereqs) prereqs; exit 0 ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+moddir="${DESTDIR}/usr/lib/modules/${version}/kernel/drivers/gpu"
+removed=0
+if [ -d "$moddir" ]; then
+	for m in $(find "$moddir" -name '*.ko*'); do
+		if modinfo -F firmware "$m" 2>/dev/null | grep -q '^nvidia/'; then
+			rm -f "$m"
+			removed=$((removed + 1))
+		fi
+	done
+fi
+for fw in "${DESTDIR}/usr/lib/firmware/nvidia" "${DESTDIR}/lib/firmware/nvidia"; do
+	[ -d "$fw" ] && [ ! -L "$fw" ] && rm -rf "$fw"
+done
+[ "${verbose:-n}" = y ] && echo "driftwood-nvidia-late: removed $removed NVIDIA modules and their firmware"
+exit 0
