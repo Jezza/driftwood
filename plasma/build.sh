@@ -9,6 +9,11 @@ cd "$(dirname "$0")"
 VERSION="${VERSION:-13.$(date -u +%y%m%d)}"
 NAME="Driftwood_Plasma_${VERSION}"
 
+# Live root filesystem: xz with 1 MiB blocks. Smallest ISO; costs some
+# decompression speed in the live session only (installed systems are
+# copied out of it by Calamares and never read squashfs again).
+export MKSQUASHFS_OPTIONS="-b 1M"
+
 build() {
 	cp "./auto/$1" ./auto/config
 	lb clean

@@ -36,3 +36,7 @@ cp build.log "$src/out/$name.build.log"
 cd "$src/out"
 sha256sum "$name.iso" > "$name.iso.sha256"
 ls -l
+
+echo "largest files in the ISO:"
+xorriso -indev "$name.iso" -find / -type f -exec lsdl 2>/dev/null \
+    | awk '{printf "%8.1f MiB  %s\n", $5/1048576, $NF}' | sort -rn | head -15 | tee "$name.contents"

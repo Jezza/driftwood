@@ -75,6 +75,16 @@ jobs:
             debian:trixie ci/build-iso.sh
           sudo chown -R "$(id -u):$(id -g)" out
           df -h / /mnt
+      - name: Upload ISO
+        # before the size check, so an oversized ISO can still be inspected
+        uses: actions/upload-artifact@v7
+        with:
+          name: iso
+          path: |
+            out/*.iso
+            out/*.iso.sha256
+          compression-level: 0
+          retention-days: 7
       - name: Size
         run: |
           iso=out/${{ steps.meta.outputs.name }}.iso
@@ -87,20 +97,15 @@ jobs:
             echo "- headroom: $(numfmt --to=iec-i --suffix=B $(( ISO_LIMIT_BYTES - size )))"
             echo "- packages: $pkgs"
             echo "- sha256: \`$(cut -d' ' -f1 out/*.sha256)\`"
+            echo ""
+            echo '```'
+            cat out/*.contents 2>/dev/null
+            echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
           if [ "$size" -ge "$ISO_LIMIT_BYTES" ]; then
             echo "::error::ISO is $size bytes, over the 2 GiB release-asset limit"
             exit 1
           fi
-      - name: Upload ISO
-        uses: actions/upload-artifact@v7
-        with:
-          name: iso
-          path: |
-            out/*.iso
-            out/*.iso.sha256
-          compression-level: 0
-          retention-days: 7
       - name: Upload package list and build log
         if: always()
         uses: actions/upload-artifact@v7
@@ -108,6 +113,7 @@ jobs:
           name: build-info
           path: |
             out/*.packages
+            out/*.contents
             out/*.build.log
             /mnt/build/build.log
           if-no-files-found: ignore

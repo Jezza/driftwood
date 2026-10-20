@@ -13,7 +13,7 @@ lb config noauto \
 --updates true \
 --source false \
 --binary-filesystem ext4 \
---chroot-squashfs-compression-type zstd \
+--chroot-squashfs-compression-type xz \
 --binary-images iso-hybrid \
 --checksums sha256 \
 --clean \
@@ -22,8 +22,8 @@ lb config noauto \
 --debootstrap-options "--include=ca-certificates,openssl" \
 --distribution trixie \
 --distribution-binary stable \
---firmware-binary true \
---firmware-chroot true \
+--firmware-binary false \
+--firmware-chroot false \
 --initramfs live-boot \
 --iso-publisher Driftwood \
 --iso-volume Driftwood_Plasma \

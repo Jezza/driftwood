@@ -56,6 +56,34 @@ fancontrol
 ffmpeg
 firmware-linux-free
 firmware-linux-nonfree
+# Firmware for desktops and laptops. live-build's --firmware-chroot would
+# install every firmware package Debian has (server NICs, datacentre GPUs,
+# telephony cards...), so it is off and the hardware we target is listed here.
+# GPUs
+firmware-amd-graphics
+firmware-intel-graphics
+firmware-nvidia-graphics
+# Wi-Fi and Bluetooth (Intel, Atheros/Qualcomm, Realtek incl. r8169 ethernet,
+# MediaTek, Broadcom, Marvell mwifiex as in Surface devices, old USB dongles)
+firmware-iwlwifi
+firmware-atheros
+firmware-realtek
+firmware-mediatek
+firmware-brcm80211
+firmware-libertas
+firmware-ath9k-htc
+firmware-carl9170
+firmware-zd1211
+bluez-firmware
+# Sound (SOF DSP on modern Intel/AMD laptops, Cirrus amplifiers, Intel AVS)
+firmware-sof-signed
+firmware-intel-sound
+firmware-cirrus
+# Intel laptop extras (IPU cameras, sensor hub, VPU) and the rest of linux-firmware
+firmware-intel-misc
+firmware-misc-nonfree
+# USB DVB-T sticks
+firmware-siano
 flac
 flatpak
 fonts-cantarell

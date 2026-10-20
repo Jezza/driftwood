@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 V=${1:-plasma}
 C=$V/config
 WORK=$(mktemp -d -p "${TMPDIR:-/tmp}" resolve.XXXX)
-trap 'rm -rf "$WORK"' EXIT
+trap '[ -n "${KEEP_SIM:-}" ] && cp "$WORK/sim.out" "$KEEP_SIM"; rm -rf "$WORK"' EXIT
 
 mkdir -p "$WORK"/etc/apt/{sources.list.d,preferences.d,trusted.gpg.d,apt.conf.d} \
          "$WORK"/var/lib/apt/lists/partial "$WORK"/var/cache/apt/archives/partial \
@@ -55,7 +55,7 @@ pkgs=$(cat "$C"/package-lists/*.list.chroot | sed 's/#.*//' | tr -s ' \t' '\n' |
 kernel=$(sed -n 's/.*--linux-packages "\([^"]*\)".*/\1/p' "$V/auto/iso")
 for k in $kernel; do pkgs="$pkgs $k-amd64"; done
 echo "resolving $(echo $pkgs | wc -w) packages (kernel: $kernel)"
-if out=$(apt-get "${APT[@]}" -s install $pkgs 2>&1); then
+if out=$(apt-get "${APT[@]}" -s install $pkgs 2>&1); then echo "$out" > "$WORK/sim.out"
     n=$(grep -c '^Inst ' <<<"$out")
     echo "OK: $n packages would be installed"
     grep -E '^Inst (linux-image-[^ ]+|linux-base|firmware-linux-nonfree|firefox) ' <<<"$out" | sed 's/^/  /'
