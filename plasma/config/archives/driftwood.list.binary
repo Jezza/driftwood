@@ -1,5 +1,0 @@
-# Debian Testing
-#deb https://deb.debian.org/debian/ testing main contrib non-free non-free-firmware  #Debian Testing
-
-# Debian Sid ("Unstable")
-#deb https://deb.debian.org/debian/ sid main contrib non-free non-free-firmware  #Debian Sid ("Unstable")

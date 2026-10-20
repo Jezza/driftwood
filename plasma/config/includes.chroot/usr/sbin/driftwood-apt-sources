@@ -1,0 +1,60 @@
+#!/bin/sh
+# Driftwood: write the system's APT sources in deb822 format.
+#
+#   driftwood-apt-sources [ROOT]     (ROOT defaults to /)
+#
+# live-build writes a one-line /etc/apt/sources.list for the image. Debian 13's
+# apt prefers deb822 .sources files and nags about one-line lists
+# (`apt modernize-sources`, SpiralLinux#527), and Signed-By pins each source
+# to Debian's archive keyring. Replaces sources.list with
+# /etc/apt/sources.list.d/debian.sources. Other .sources files (Mozilla) are
+# left alone. Run by the live-config hook (live session) and by Calamares'
+# shellprocess (installed system), so both get the same sources.
+#
+# Suites are the `stable` aliases: installed systems follow Debian stable
+# into the next release.
+set -eu
+
+ROOT=${1:-/}
+APT="${ROOT%/}/etc/apt"
+KEYRING=/usr/share/keyrings/debian-archive-keyring.pgp
+COMPONENTS="main contrib non-free non-free-firmware"
+
+mkdir -p "$APT/sources.list.d"
+cat > "$APT/sources.list.d/debian.sources" <<EOF
+# Debian stable. See sources.list(5) and https://wiki.debian.org/SourcesList
+Types: deb
+URIs: https://deb.debian.org/debian/
+Suites: stable stable-updates
+Components: $COMPONENTS
+Signed-By: $KEYRING
+
+Types: deb
+URIs: https://security.debian.org/debian-security/
+Suites: stable-security
+Components: $COMPONENTS
+Signed-By: $KEYRING
+
+# Backports: newer kernels and firmware. Only packages pinned in
+# /etc/apt/preferences.d/99backports come from here automatically.
+Types: deb
+URIs: https://deb.debian.org/debian/
+Suites: stable-backports
+Components: $COMPONENTS
+Signed-By: $KEYRING
+
+# Source packages, for apt source / apt build-dep:
+Types: deb-src
+URIs: https://deb.debian.org/debian/
+Suites: stable stable-updates stable-backports
+Components: $COMPONENTS
+Signed-By: $KEYRING
+Enabled: no
+EOF
+chmod 0644 "$APT/sources.list.d/debian.sources"
+
+# Keep an empty sources.list rather than deleting it, so tools that expect
+# the file find it (and say where the sources went).
+cat > "$APT/sources.list" <<EOF
+# Debian's sources are in /etc/apt/sources.list.d/debian.sources (deb822).
+EOF

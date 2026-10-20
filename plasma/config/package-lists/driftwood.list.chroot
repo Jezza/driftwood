@@ -33,6 +33,10 @@ cryptsetup
 cryptsetup-initramfs
 # keyctl, for the decrypt_keyctl keyscript (one passphrase prompt for all volumes)
 keyutils
+# Opens crypttab volumes the initramfs does not (key-file volumes in manual
+# layouts). Debian 13 split it out of systemd; without it they never unlock
+# (SpiralLinux#566, Debian 13 release notes 5.1.6).
+systemd-cryptsetup
 cups
 cups-browsed
 cups-client
@@ -331,6 +335,10 @@ kde-config-gtk-style-preview
 kde-config-plymouth
 kde-config-screenlocker
 kde-config-tablet
+# Discover's "Configure updates" page (SpiralLinux#568)
+kde-config-updates
+# "About this System" and hardware info in System Settings (SpiralLinux#443)
+kinfocenter
 kde-zeroconf
 kdeadmin
 kdenetwork-filesharing
@@ -408,6 +416,8 @@ vlc-plugin-visualization
 
 ### Graphics ###
 gwenview
+# WebP, TIFF, TGA, ICNS for every Qt 6 app (SpiralLinux#484)
+qt6-image-formats-plugins
 
 
 ### Internet ###
