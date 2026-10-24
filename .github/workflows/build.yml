@@ -167,8 +167,9 @@ jobs:
         run: |
           out=boot-${{ matrix.variant }}-${{ matrix.mode }}
           # UEFI is the path a user takes (firmware, GRUB menu, desktop): record it
-          video=${{ matrix.mode == 'uefi' && format('--video boot-{0}-uefi/boot-{0}.mp4', matrix.variant) || '' }}
-          python3 ci/boot-test.py iso/*.iso --mode ${{ matrix.mode }} --out "$out" $video
+          video=()
+          if [ "${{ matrix.mode }}" = uefi ]; then video=(--video "$out/boot-${{ matrix.variant }}.mp4"); fi
+          python3 ci/boot-test.py iso/*.iso --mode ${{ matrix.mode }} --out "$out" "${video[@]}"
       - name: Summary
         if: always()
         run: cat boot-${{ matrix.variant }}-${{ matrix.mode }}/summary.md >> "$GITHUB_STEP_SUMMARY" || true
