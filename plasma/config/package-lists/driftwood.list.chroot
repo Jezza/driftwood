@@ -113,8 +113,8 @@ gstreamer1.0-plugins-good
 gstreamer1.0-plugins-ugly
 gstreamer1.0-tools
 gstreamer1.0-x
-gtk2-engines
-gtk2-engines-murrine
+# GTK apps drawn with Breeze, matching Plasma (needs gtk2-engines-pixbuf)
+breeze-gtk-theme
 gtk2-engines-pixbuf
 gvfs-backends
 libglib2.0-bin
@@ -177,9 +177,14 @@ musepack-tools
 nano
 netcat-openbsd
 network-manager
+# VPN plugins for plasma-nm (WireGuard is built into NetworkManager;
+# wireguard-tools adds the wg command)
+network-manager-openvpn
+network-manager-openconnect
+network-manager-vpnc
+wireguard-tools
 nss-passwords
 ntfs-3g
-numix-gtk-theme
 numlockx
 openssh-server
 os-prober

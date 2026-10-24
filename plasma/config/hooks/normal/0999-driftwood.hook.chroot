@@ -2,7 +2,7 @@
 
 ### Install Flatpak packages and allow access to user configs for decent GTK and Qt theme support
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-flatpak install -y --noninteractive --system org.gtk.Gtk3theme.Numix
+flatpak install -y --noninteractive --system org.gtk.Gtk3theme.Breeze
 flatpak override --filesystem=xdg-config/gtk-3.0:ro
 flatpak override --filesystem=xdg-config/gtk-4.0:ro
 flatpak override --filesystem=xdg-config/fontconfig:ro
