@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Unit tests for ci/boot-test.py's pure parts: pcap/DHCP parsing, PPM->PNG, serial analysis."""
 import importlib.util
+import json
 import os
+import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import zlib
@@ -81,6 +84,49 @@ check(a["kernel"].startswith("[    0.000000] Linux version 6.12.48"), "kernel li
 check(not (a["kernel_panic"] or a["emergency"] or a["live_boot_failed"]), "no fatal markers")
 b = bt.analyse_serial("Unable to find a medium containing a live file system\n---[ end Kernel panic - not syncing")
 check(b["live_boot_failed"] and b["kernel_panic"], "fatal markers found")
+
+# Recorder: frames at changing resolutions, encoded at their real times
+if shutil.which("ffmpeg") and shutil.which("ffprobe"):
+    with tempfile.TemporaryDirectory() as t:
+        srcs = {}
+        colour = {640: (255, 0, 0), 1024: (0, 255, 0), 1280: (0, 0, 255)}
+        for w, h in ((640, 480), (1024, 768), (1280, 800)):
+            ppm = os.path.join(t, f"{w}.ppm")
+            open(ppm, "wb").write(b"P6\n%d %d\n255\n" % (w, h) + bytes(colour[w]) * (w * h))
+            srcs[w] = os.path.join(t, f"{w}.png")
+            bt.ppm_to_png(ppm, srcs[w])
+
+        class FakeQMP:
+            n = 0
+            def cmd(self, name, filename, format):
+                shutil.copy(srcs[640 if self.n < 10 else 1024 if self.n < 20 else 1280], filename)
+                self.n += 1
+                return {"return": {}}
+
+        mp4 = os.path.join(t, "boot.mp4")
+        rec = bt.Recorder(FakeQMP(), t, mp4, 0.5)
+        for i in range(250):          # 25 s of polling every 0.1 s
+            rec.tick(i / 10)
+        check(len(rec.frames) == 50, f"one frame per 0.5 s ({len(rec.frames)})")
+        err = rec.encode(hold=3.0)
+        check(err is None, f"encode: {err}")
+        probe = json.loads(subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "stream=width,height:format=duration",
+             "-of", "json", mp4], capture_output=True, text=True).stdout)
+        st, dur = probe["streams"][0], float(probe["format"]["duration"])
+        check((st["width"], st["height"]) == (1280, 800), f"fixed output size {st['width']}x{st['height']}")
+        check(abs(dur - 27.5) < 0.6, f"duration follows frame times ({dur:.1f}s, expect ~27.5)")
+        check(not os.path.exists(os.path.join(t, ".frames")), "frames cleaned up")
+        # frames 0-9 (0-4.5 s) red, 10-19 (5-9.5 s) green, then blue: the
+        # centre pixel at a time shows which frame is on screen then
+        for at, want in ((2, 0), (7, 1), (20, 2)):
+            px = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(at), "-i", mp4, "-frames:v", "1",
+                                 "-vf", "crop=2:2:640:400,scale=1:1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                                capture_output=True).stdout
+            check(len(px) == 3 and max(range(3), key=lambda i: px[i]) == want,
+                  f"frame on screen at {at}s (rgb {tuple(px)})")
+else:
+    print("SKIP Recorder (no ffmpeg)")
 
 print(f"{fails} failure(s)")
 sys.exit(1 if fails else 0)

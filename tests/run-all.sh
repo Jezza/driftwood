@@ -2,7 +2,7 @@
 # Run every test in tests/. Exit non-zero if any fails.
 # Needs: bash, python3, cryptsetup (cryptsetup-bin); grub-script-check
 # (grub-common) is used when present; kmod (modinfo) for the initramfs hook
-# test; apt-get for the APT sources test.
+# test; apt-get for the APT sources test; ffmpeg for the boot recording test.
 cd "$(dirname "$0")" || exit 1
 rc=0
 for t in test_*; do

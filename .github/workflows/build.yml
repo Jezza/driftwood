@@ -34,7 +34,7 @@ jobs:
         run: |
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends git ca-certificates curl xz-utils binutils zstd \
-            python3 python3-yaml cryptsetup-bin grub-common kmod initramfs-tools-core >/dev/null
+            python3 python3-yaml cryptsetup-bin grub-common kmod initramfs-tools-core ffmpeg >/dev/null
       - uses: actions/checkout@v7
       - name: Package lists resolve against trixie
         run: |
@@ -153,7 +153,9 @@ jobs:
       - name: QEMU
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 qemu-utils ovmf xorriso >/dev/null
+          # ffmpeg encodes the UEFI boot recording
+          sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 qemu-utils ovmf xorriso \
+            ${{ matrix.mode == 'uefi' && 'ffmpeg' || '' }} >/dev/null
           qemu-system-x86_64 --version | head -1
       - uses: actions/download-artifact@v8
         with:
@@ -162,7 +164,11 @@ jobs:
       - name: Verify checksum
         run: cd iso && sha256sum -c *.sha256
       - name: Boot
-        run: python3 ci/boot-test.py iso/*.iso --mode ${{ matrix.mode }} --out boot-${{ matrix.variant }}-${{ matrix.mode }}
+        run: |
+          out=boot-${{ matrix.variant }}-${{ matrix.mode }}
+          # UEFI is the path a user takes (firmware, GRUB menu, desktop): record it
+          video=${{ matrix.mode == 'uefi' && format('--video boot-{0}-uefi/boot-{0}.mp4', matrix.variant) || '' }}
+          python3 ci/boot-test.py iso/*.iso --mode ${{ matrix.mode }} --out "$out" $video
       - name: Summary
         if: always()
         run: cat boot-${{ matrix.variant }}-${{ matrix.mode }}/summary.md >> "$GITHUB_STEP_SUMMARY" || true

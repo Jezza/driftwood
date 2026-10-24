@@ -16,9 +16,11 @@ Pass criteria:
              panic or emergency mode. Failed units are reported.
 
 Artifacts in --out: serial.log, screenshots (deduplicated, every few
-seconds), net.pcap, result.json, and summary.md.
+seconds), net.pcap, result.json, and summary.md. With --video, also an
+H.264 recording of the screen from power-on to the desktop (frames grabbed
+every --frame-interval seconds, encoded by ffmpeg at their real times).
 
-Only the Python standard library is used.
+Only the Python standard library is used (plus ffmpeg for --video).
 """
 import argparse
 import hashlib
@@ -143,6 +145,62 @@ def ppm_to_png(ppm_path, png_path):
     open(png_path, "wb").write(png)
 
 
+class Recorder:
+    """Screen frames at a fixed interval with their real times, encoded to
+    a video at the end. The display changes resolution during boot
+    (firmware, GRUB, kernel framebuffer, desktop), so every frame is scaled
+    into the same box."""
+
+    def __init__(self, qmp, out, path, interval):
+        self.qmp, self.path, self.interval = qmp, path, interval
+        self.dir = os.path.join(out, ".frames")
+        shutil.rmtree(self.dir, ignore_errors=True)
+        os.makedirs(self.dir)
+        self.frames = []  # (time, file)
+        self.next = 0.0
+
+    def tick(self, now):
+        if now < self.next:
+            return
+        self.next = now + self.interval
+        f = os.path.join(self.dir, f"{len(self.frames):05d}.png")
+        try:
+            r = self.qmp.cmd("screendump", filename=f, format="png")
+        except (OSError, EOFError):
+            return
+        if "error" not in r and os.path.exists(f):
+            self.frames.append((now, f))
+
+    def encode(self, hold=3.0, size=(1280, 800), fps=10):
+        """Write the video; returns an error string or None."""
+        try:
+            if len(self.frames) < 2:
+                return f"only {len(self.frames)} frame(s) captured"
+            if not shutil.which("ffmpeg"):
+                return "ffmpeg not installed"
+            lst = os.path.join(self.dir, "list.txt")
+            with open(lst, "w") as f:
+                for (t, fn), (t2, _) in zip(self.frames, self.frames[1:] + [(self.frames[-1][0] + hold, None)]):
+                    f.write(f"file '{fn}'\nduration {t2 - t:.3f}\n")
+                # the concat demuxer drops the last entry's duration, so the
+                # last frame is listed again and the output cut with -t
+                f.write(f"file '{self.frames[-1][1]}'\n")
+            total = self.frames[-1][0] - self.frames[0][0] + hold
+            w, h = size
+            vf = (f"scale={w}:{h}:force_original_aspect_ratio=decrease:eval=frame,"
+                  f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black:eval=frame,format=yuv420p")
+            r = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                                "-f", "concat", "-safe", "0", "-i", lst, "-vf", vf,
+                                "-r", str(fps), "-fps_mode", "cfr", "-t", f"{total:.3f}", "-c:v", "libx264",
+                                "-preset", "medium", "-crf", "28", "-movflags", "+faststart",
+                                self.path], capture_output=True, text=True)
+            if r.returncode != 0:
+                return f"ffmpeg failed: {r.stderr.strip()[-500:]}"
+            return None
+        finally:
+            shutil.rmtree(self.dir, ignore_errors=True)
+
+
 class Screens:
     """Periodic screenshots, keeping only ones that differ from the last."""
 
@@ -218,6 +276,9 @@ def main():
     ap.add_argument("--memory", default="4096")
     ap.add_argument("--settle", type=int, default=45,
                     help="seconds to keep running (screenshots) after the pass condition")
+    ap.add_argument("--video", help="also record the screen to this .mp4 (needs ffmpeg)")
+    ap.add_argument("--frame-interval", type=float, default=0.5,
+                    help="seconds between video frames (default 0.5)")
     args = ap.parse_args()
 
     out = os.path.abspath(args.out)
@@ -260,12 +321,20 @@ def main():
     try:
         qmp = QMP(qmp_sock, proc=qemu)
         screens = Screens(qmp, out)
+        video = Recorder(qmp, out, os.path.abspath(args.video), args.frame_interval) if args.video else None
         passed_at = None
+        next_check = 0.0
         while True:
             now = time.time() - start
             if qemu.poll() is not None:
                 result["reason"] = f"qemu exited with {qemu.returncode}"
                 break
+            if video:
+                video.tick(now)
+            if now < next_check:
+                time.sleep(min(0.1, next_check - now))
+                continue
+            next_check = now + 5
             screens.grab(f"{int(now):04d}s")
             if passed_at is None:
                 if args.mode in ("uefi", "bios"):
@@ -288,8 +357,9 @@ def main():
                 break
             if now > timeout:
                 break
-            time.sleep(5)
         screens.grab("final")
+        if video:
+            video.tick(time.time() - start)
         try:
             qmp.cmd("quit")
         except (OSError, EOFError):
@@ -303,6 +373,11 @@ def main():
         if qemu_out.strip():
             print("qemu output:\n" + qemu_out)
 
+    if video:
+        err = video.encode()
+        result["video"] = None if err else os.path.basename(args.video)
+        if err:
+            print(f"video: {err}")
     text = open(serial, errors="replace").read() if os.path.exists(serial) else ""
     result["serial"] = analyse_serial(text)
     result["dhcp"] = [DHCP_NAMES.get(t, t) for _, t in dhcp_messages(pcap)]
@@ -324,6 +399,8 @@ def main():
         else:
             md += ["- failed units: none"]
     md.append(f"- screenshots: {screens.n}")
+    if args.video:
+        md.append(f"- video: {result.get('video') or 'not recorded (see log)'}")
     open(os.path.join(out, "summary.md"), "w").write("\n".join(md) + "\n")
     print("\n".join(md))
     for f in (qmp_sock, os.path.join(out, ".ovmf_vars.fd")):
