@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""
+driftwood-span-wallpaper: spread one wide image across all your monitors in
+KDE Plasma.
+
+    driftwood-span-wallpaper IMAGE [--fill] [--dry-run] [--out DIR]
+
+Plasma sets one wallpaper per screen, so a panorama has to be cut up. This
+asks Plasma for every screen's position and size, lays the image over the
+whole arrangement, cuts out the part under each screen, and sets each piece
+as that screen's wallpaper.
+
+  fit (default)  the whole image is shown; if its shape doesn't match the
+                 arrangement, the leftover area is filled with --colour
+  --fill         the image covers every screen; the overflow is cropped
+
+Screens of different sizes and offsets (e.g. a portrait monitor beside two
+landscape ones) get exactly the part of the image they cover. Pieces keep
+the image's own pixels (no rescaling) when the image is at least as big as
+the arrangement. Runs again after you rearrange monitors.
+
+Needs: python3-pil, and python3-dbus or the qdbus6/qdbus command.
+"""
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+QUERY_JS = """
+var out = [];
+desktops().forEach(function (d) {
+    if (d.screen < 0) return;
+    var g = screenGeometry(d.screen);
+    out.push({id: d.id, screen: d.screen, x: g.x, y: g.y, w: g.width, h: g.height});
+});
+print(JSON.stringify(out));
+"""
+
+SET_JS = """
+var pieces = %s;
+pieces.forEach(function (p) {
+    var d = desktopById(p.id);
+    if (!d) return;
+    d.wallpaperPlugin = "org.kde.image";
+    d.currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+    d.writeConfig("Image", p.url);
+    d.writeConfig("FillMode", 1);      // Scaled, keep proportions
+    d.writeConfig("Color", p.colour);
+    d.reloadConfig();
+});
+print("ok");
+"""
+
+
+# ------------------------------------------------------------------ geometry
+
+def layout(screens, img_w, img_h, mode="fit"):
+    """Where each screen falls in image pixels.
+
+    screens: [{"x","y","w","h", ...}] in Plasma's (logical) coordinates.
+    Returns [(screen, (left, top, right, bottom))] as floats in image pixel
+    coordinates; parts outside 0..img_w / 0..img_h are padding.
+    """
+    x0 = min(s["x"] for s in screens)
+    y0 = min(s["y"] for s in screens)
+    bw = max(s["x"] + s["w"] for s in screens) - x0
+    bh = max(s["y"] + s["h"] for s in screens) - y0
+    # image pixels per screen unit
+    k = (max if mode == "fit" else min)(img_w / bw, img_h / bh)
+    # the arrangement, in image pixels, centred on the image
+    ox = (img_w - bw * k) / 2
+    oy = (img_h - bh * k) / 2
+    return [(s, (ox + (s["x"] - x0) * k, oy + (s["y"] - y0) * k,
+                 ox + (s["x"] - x0 + s["w"]) * k, oy + (s["y"] - y0 + s["h"]) * k))
+            for s in screens]
+
+
+def cut(img, box, colour):
+    """The image under box, padded with colour where box leaves the image."""
+    from PIL import Image
+    l, t, r, b = (round(v) for v in box)
+    piece = Image.new("RGB", (max(1, r - l), max(1, b - t)), colour)
+    il, it = max(l, 0), max(t, 0)
+    ir, ib = min(r, img.width), min(b, img.height)
+    if ir > il and ib > it:
+        piece.paste(img.crop((il, it, ir, ib)), (il - l, it - t))
+    return piece
+
+
+# ------------------------------------------------------------------- plasma
+
+def evaluate(js):
+    try:
+        import dbus
+        shell = dbus.SessionBus().get_object("org.kde.plasmashell", "/PlasmaShell")
+        return str(dbus.Interface(shell, "org.kde.PlasmaShell").evaluateScript(js))
+    except ImportError:
+        pass
+    for tool in ("qdbus6", "qdbus", "qdbus-qt6"):
+        if shutil.which(tool):
+            r = subprocess.run([tool, "org.kde.plasmashell", "/PlasmaShell",
+                                "org.kde.PlasmaShell.evaluateScript", js],
+                               capture_output=True, text=True)
+            if r.returncode != 0:
+                sys.exit(f"{tool}: {r.stderr.strip()}")
+            return r.stdout
+    sys.exit("need python3-dbus or qdbus6 to talk to Plasma")
+
+
+def query_screens():
+    out = evaluate(QUERY_JS).strip()
+    try:
+        screens = json.loads(out.splitlines()[-1])
+    except (ValueError, IndexError):
+        sys.exit(f"unexpected reply from plasmashell: {out!r}")
+    if not screens:
+        sys.exit("plasmashell reported no desktops on any screen")
+    return screens
+
+
+# --------------------------------------------------------------------- main
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[1].strip())
+    ap.add_argument("image")
+    ap.add_argument("--fill", action="store_true", help="cover every screen, cropping overflow")
+    ap.add_argument("--colour", default="#000000", help="padding colour in fit mode (default black)")
+    ap.add_argument("--out", default=os.path.expanduser("~/.local/share/wallpapers/spanned"),
+                    help="where the pieces are written")
+    ap.add_argument("--dry-run", action="store_true", help="write the pieces, don't set them")
+    ap.add_argument("--screens", help=argparse.SUPPRESS)  # JSON, for testing without Plasma
+    a = ap.parse_args(argv)
+
+    try:
+        from PIL import Image, ImageColor
+    except ImportError:
+        sys.exit("needs Pillow (apt install python3-pil)")
+    img = Image.open(a.image)
+    img.load()
+    img = img.convert("RGB")
+    colour = ImageColor.getrgb(a.colour)
+
+    screens = json.loads(a.screens) if a.screens else query_screens()
+    mode = "fill" if a.fill else "fit"
+
+    # new file names for every image/arrangement, or Plasma keeps showing
+    # its cached copy of a file it has already loaded
+    tag = hashlib.sha256(open(a.image, "rb").read()
+                         + json.dumps([screens, mode, a.colour], sort_keys=True).encode()).hexdigest()[:10]
+    stem = os.path.splitext(os.path.basename(a.image))[0]
+    jpeg = img.format == "JPEG" or a.image.lower().endswith((".jpg", ".jpeg"))
+    os.makedirs(a.out, exist_ok=True)
+    for old in os.listdir(a.out):
+        if old.startswith(stem + "-screen") and tag not in old:
+            os.unlink(os.path.join(a.out, old))
+
+    pieces = []
+    for s, box in layout(screens, img.width, img.height, mode):
+        piece = cut(img, box, colour)
+        path = os.path.join(a.out, f"{stem}-screen{s['screen']}-{tag}.{'jpg' if jpeg else 'png'}")
+        piece.save(path, **({"quality": 95, "subsampling": 0} if jpeg else {}))
+        pieces.append({"id": s.get("id"), "url": "file://" + path, "colour": a.colour})
+        print(f"screen {s['screen']} at {s['x']},{s['y']} {s['w']}x{s['h']}: "
+              f"{piece.width}x{piece.height} -> {path}")
+
+    if a.dry_run:
+        return
+    reply = evaluate(SET_JS % json.dumps(pieces)).strip()
+    if "ok" not in reply:
+        sys.exit(f"plasmashell did not confirm: {reply!r}")
+    print(f"set {len(pieces)} wallpaper(s)")
+
+
+if __name__ == "__main__":
+    main()

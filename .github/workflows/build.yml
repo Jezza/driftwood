@@ -34,7 +34,7 @@ jobs:
         run: |
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends git ca-certificates curl xz-utils binutils zstd \
-            python3 python3-yaml cryptsetup-bin grub-common kmod initramfs-tools-core ffmpeg >/dev/null
+            python3 python3-yaml python3-pil cryptsetup-bin grub-common kmod initramfs-tools-core ffmpeg >/dev/null
       - uses: actions/checkout@v7
       - name: Package lists resolve against trixie
         run: |

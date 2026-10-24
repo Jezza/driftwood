@@ -423,6 +423,9 @@ vlc-plugin-visualization
 gwenview
 # WebP, TIFF, TGA, ICNS for every Qt 6 app (SpiralLinux#484)
 qt6-image-formats-plugins
+# driftwood-span-wallpaper (one wide image across several monitors)
+python3-pil
+python3-dbus
 
 
 ### Internet ###

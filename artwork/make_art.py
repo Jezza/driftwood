@@ -50,7 +50,5 @@ R(slide, f"{D}/out/slide1.png", 800, 480)
 # logo PNG for Calamares productLogo/productIcon
 R(f"{D}/logo.svg", f"{D}/out/driftwood-logo.png", 256, 256, "transparent")
 
-# desktop/SDDM wallpaper: the photo, 2560x1600 (cover crop)
-wall = page("wallpaper", 2560, 1600, "<div class=photo></div>")
-R(wall, f"{D}/out/driftwood-captain-cove-2560x1600.png", 2560, 1600)
+# (the desktop wallpaper is a supplied image, not rendered here)
 print("rendered:", sorted(os.listdir(f"{D}/out")))

@@ -92,10 +92,19 @@ Also used:
 
 - **Logo** (`artwork/logo.svg`): made for Driftwood and released under
   [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
-- **Wallpaper and installer photo:** "Driftwood amongst the grasses at the head of
-  Captain Cove", British Columbia, by
+- **Wallpaper** (`driftwood-wireframe-2560x1440.jpg`): a green wireframe
+  landscape, supplied by the project owner; the middle third of a 7680×1440
+  triple-monitor panorama.
+- **Installer and boot-menu photo:** "Driftwood amongst the grasses at the
+  head of Captain Cove", British Columbia, by
   [Extemporalist](https://commons.wikimedia.org/wiki/File:Driftwood_amongst_the_grasses_at_the_head_of_Captain_Cove.webp),
   CC0 1.0, via Wikimedia Commons.
 
-`artwork/make_art.py` regenerates every branded image (boot splash, installer
-welcome, slideshow, logo PNG, wallpaper) from these two sources.
+`artwork/make_art.py` regenerates the boot splash, installer welcome,
+slideshow and logo PNG from the logo and the photo.
+
+**Several monitors:** `driftwood-span-wallpaper IMAGE` spreads one wide image
+across all screens. It reads the monitor layout from Plasma, cuts the image
+into one piece per screen (handling mixed sizes and portrait screens) and
+sets them. The whole image is shown by default; `--fill` crops it to cover
+every screen instead.

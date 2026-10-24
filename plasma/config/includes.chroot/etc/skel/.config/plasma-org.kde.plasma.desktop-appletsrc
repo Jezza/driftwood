@@ -49,7 +49,7 @@ positions=1,8,desktop:/language-support.desktop,0,0,desktop:/calamares-install-d
 sortMode=-1
 
 [Containments][1][Wallpaper][org.kde.image][General]
-Image=file:///usr/share/wallpapers/driftwood-captain-cove-2560x1600.jpg
+Image=file:///usr/share/wallpapers/driftwood-wireframe-2560x1440.jpg
 SlidePaths=/usr/share/wallpapers
 
 [Containments][2]
