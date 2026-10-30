@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render every Driftwood artwork file from logo.svg + the CC0 wallpaper photo."""
+"""Render Driftwood's artwork from logo.svg, the desktop wallpaper and the CC0 photo."""
 import os, subprocess
 D = os.path.dirname(os.path.abspath(__file__))
 PHOTO_URL = ("https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/"
@@ -13,6 +13,10 @@ os.makedirs(f"{D}/out", exist_ok=True)
 R = lambda *a: subprocess.run(["python3", os.path.join(D, "render.py"), *map(str, a)], check=True, stdout=subprocess.DEVNULL)
 logo = f"file://{D}/logo.svg"
 photo = f"file://{D}/captain-cove-1920.jpg"
+# the desktop wallpaper (supplied, not rendered); the boot menus match it
+WALLPAPER = os.path.join(D, "..", "plasma", "config", "includes.chroot", "usr", "share",
+                         "wallpapers", "driftwood-wireframe-2560x1440.jpg")
+wallpaper = "file://" + os.path.abspath(WALLPAPER)
 
 def page(name, w, h, body, bg="transparent"):
     p = os.path.join(D, name + ".html")
@@ -20,15 +24,18 @@ def page(name, w, h, body, bg="transparent"):
 html,body{{margin:0;width:{w}px;height:{h}px;overflow:hidden;background:{bg};
   font-family:'DejaVu Sans','Noto Sans',sans-serif;color:#fff}}
 .photo{{position:absolute;inset:0;background:url('{photo}') center/cover}}
+.wall{{position:absolute;inset:0;background:url('{wallpaper}') center/cover}}
 .shade{{position:absolute;inset:0}}
 .c{{position:absolute;left:0;right:0;text-align:center}}
 </style></head><body>{body}</body></html>""")
     return p
 
-# boot menus (GRUB + isolinux): 640x480, darkened photo, logo + wordmark in the top half
+# boot menus (GRUB + isolinux): 640x480, the desktop wallpaper (centre crop),
+# logo + wordmark in the top half; the lower half, where the menu entries
+# are drawn, darkened so the text stays readable
 grub = page("splash", 640, 480, f"""
-<div class=photo style="filter:blur(1.5px)"></div>
-<div class=shade style="background:linear-gradient(#0b2a2ecc,#0b2a2ef0 55%,#071b1e)"></div>
+<div class=wall></div>
+<div class=shade style="background:linear-gradient(#0000,#0000 40%,#000a 55%,#000c)"></div>
 <img src="{logo}" class=c style="left:270px;top:40px;width:100px;height:100px">
 <div class=c style="top:150px;font-size:34px;font-weight:bold;letter-spacing:1px">Driftwood</div>""")
 R(grub, f"{D}/out/splash.png", 640, 480)
