@@ -9,7 +9,6 @@ sources and outputs it rendered together."""
 import json
 import importlib.util
 import os
-import subprocess
 import sys
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -28,8 +27,14 @@ def check(ok, what):
     fails += not ok
 
 
-tracked = subprocess.run(["git", "-C", repo, "ls-files"], capture_output=True, text=True, check=True).stdout.split()
-images = {os.path.join(repo, f) for f in tracked if f.lower().endswith(IMAGE_EXT)}
+# Walks the tree rather than asking git: CI runs in a container where git
+# refuses the checkout ("dubious ownership"). Skipped: git metadata,
+# caches and render scratch output (all gitignored).
+SKIP_DIRS = {".git", ".cache", "__pycache__", "out"}
+images = set()
+for root, dirs, files in os.walk(repo):
+    dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+    images |= {os.path.join(root, f) for f in files if f.lower().endswith(IMAGE_EXT)}
 known = set(art.SOURCES) | set(art.all_outputs())
 
 for p in sorted(images - known):
@@ -48,6 +53,6 @@ for rel in sorted(set(recorded) | set(current)):
           f"{rel} matches what make_art.py rendered" if recorded.get(rel) == current.get(rel)
           else f"{rel} changed since make_art.py ran (re-run it)")
 
-print(f"{len(images)} images tracked, {len(known)} known")
+print(f"{len(images)} images found, {len(known)} known")
 print(f"{fails} failure(s)")
 sys.exit(1 if fails else 0)
