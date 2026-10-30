@@ -95,13 +95,11 @@ Also used:
 - **Wallpaper** (`driftwood-wireframe-2560x1440.jpg`): a green wireframe
   landscape, supplied by the project owner; the middle third of a 7680×1440
   triple-monitor panorama.
-- **Installer photo:** "Driftwood amongst the grasses at the
-  head of Captain Cove", British Columbia, by
-  [Extemporalist](https://commons.wikimedia.org/wiki/File:Driftwood_amongst_the_grasses_at_the_head_of_Captain_Cove.webp),
-  CC0 1.0, via Wikimedia Commons.
 
-`artwork/make_art.py` regenerates the boot-menu background (from the
-wallpaper), installer welcome, slideshow and logo PNG.
+`artwork/make_art.py` renders every other image from those two (live and
+installed boot-menu backgrounds, installer slideshow, welcome image, logo
+PNG) and writes each where the build uses it; `tests/test_artwork.py` fails
+if any image in the repo is stale or not made by it.
 
 **Several monitors:** `driftwood-span-wallpaper IMAGE` spreads one wide image
 across all screens. It reads the monitor layout from Plasma, cuts the image

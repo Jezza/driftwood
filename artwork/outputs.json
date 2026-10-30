@@ -1,0 +1,10 @@
+{
+ "artwork/logo.svg": "166fe040723e340e86dd3e67845798b178ca4a0b1a24b4c5467ecc318c5df411",
+ "plasma/config/bootloaders/grub-pc/splash.png": "3a364ad30ad2fc4fb8532152144a7fdb368e34559b3e56e3bae0d9fbfa5f702d",
+ "plasma/config/bootloaders/isolinux/splash.png": "3a364ad30ad2fc4fb8532152144a7fdb368e34559b3e56e3bae0d9fbfa5f702d",
+ "plasma/config/includes.chroot/boot/grub/splash.png": "0ccf3cf68f3cda583881c9bf9ae197fa421a6c87647d46349a965c2a5dd136e5",
+ "plasma/config/includes.chroot/etc/calamares/branding/driftwood/driftwood-logo.png": "3bb8d38d2b16c55afae05225f916f4415dd5c8f280661277ce063a384da2ee21",
+ "plasma/config/includes.chroot/etc/calamares/branding/driftwood/slide1.jpg": "5ab8b52b450064ecc6dca96d882ae7ad22b8fce72f1ed6929200c6bac282ce95",
+ "plasma/config/includes.chroot/etc/calamares/branding/driftwood/welcome.png": "4abbe1cf5d25c3d90db004ef21ed937402da124c589b13674a392d636a9fc6ff",
+ "plasma/config/includes.chroot/usr/share/wallpapers/driftwood-wireframe-2560x1440.jpg": "c82c801be82de3872ed9b216a2bfa10d5bcf1105997c58ac1b6a18c6e6ce6d7c"
+}

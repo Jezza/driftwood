@@ -1,5 +1,4 @@
 tools/.cache
 __pycache__/
 out/
-artwork/captain-cove-1920.jpg
 artwork/*.html
